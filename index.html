@@ -4,27 +4,24 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1.0">
-  <title>Dog AR 1.0</title>
+  <title>Dog MR 1.0</title>
   <link rel="stylesheet" href="styles.css">
 </head>
 <body>
-  <!-- Видео с камеры (будет фон для AR) -->
+  <!-- фон — видео с камеры -->
   <video id="camera" autoplay playsinline muted></video>
   
-  <!-- 3D‑канвас (пока пустой, можно добавить Three.js/WebXR‑сцену) -->
+  <!-- Three.js‑канвас -->
   <canvas id="three-canvas"></canvas>
 
-  <!-- UI MixDog 1.0: кнопки‑приложения -->
-  <div id="ui">
-    <button class="mixdog-btn" id="app1">App 1</button>
-    <button class="mixdog-btn" id="app2">App 2</button>
-    <button class="mixdog-btn" id="app3">App 3</button>
-  </div>
+  <!-- Зона для «плоского» HUD (CSS‑3D через Three.js CSS3DRenderer можно добавить позже) -->
+  <div id="hud"></div>
 
-  <!-- MediaPipe Hands -->
+  <!-- скрипты: Three.js, VRButton, ваши модули -->
+  <script src="https://cdn.jsdelivr.net/npm/three@0.142.0/build/three.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/three@0.142.0/examples/jsm/webxr/VRButton.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/@mediapipe/hands/hands.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js"></script>
-  <!-- наш скрипт -->
-  <script src="script.js"></script>
+  <script type="module" src="scripts/main.js"></script>
 </body>
 </html>
