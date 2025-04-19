@@ -1,0 +1,704 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <meta name="theme-color" content="#000000">
+    <title>Dog AR 2.0 with UI MixDog</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            -webkit-tap-highlight-color: transparent;
+        }
+        
+        body {
+            font-family: 'SF Pro', -apple-system, BlinkMacSystemFont, sans-serif;
+            overflow: hidden;
+            background-color: #000;
+            color: #fff;
+            height: 100vh;
+            width: 100vw;
+            position: relative;
+            perspective: 1000px;
+            transform-style: preserve-3d;
+        }
+        
+        #camera-container {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            transform-style: preserve-3d;
+        }
+        
+        #camera-feed {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            z-index: 0;
+            transform: scaleX(-1);
+        }
+        
+        #ar-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 1;
+            pointer-events: none;
+            transform-style: preserve-3d;
+        }
+        
+        /* UI MixDog Components */
+        .mixdog-element {
+            position: absolute;
+            background: rgba(30, 30, 30, 0.85);
+            backdrop-filter: blur(20px);
+            border-radius: 16px;
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+            transition: all 0.3s ease;
+            transform-style: preserve-3d;
+            pointer-events: auto;
+        }
+        
+        .mixdog-element:hover {
+            transform: translateZ(20px);
+            box-shadow: 0 12px 40px rgba(0, 0, 0, 0.4);
+        }
+        
+        .mixdog-header {
+            height: 48px;
+            padding: 0 16px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            cursor: move;
+        }
+        
+        .mixdog-title {
+            font-size: 16px;
+            font-weight: 500;
+            letter-spacing: 0.5px;
+        }
+        
+        .mixdog-close {
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            background: #ff5f56;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            color: rgba(0, 0, 0, 0.7);
+            font-size: 14px;
+            cursor: pointer;
+        }
+        
+        .mixdog-content {
+            padding: 16px;
+            height: calc(100% - 48px);
+            overflow-y: auto;
+        }
+        
+        .mixdog-button {
+            background: rgba(255, 255, 255, 0.1);
+            border: none;
+            border-radius: 8px;
+            color: white;
+            padding: 10px 16px;
+            margin: 4px;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-size: 14px;
+        }
+        
+        .mixdog-button:hover {
+            background: rgba(255, 255, 255, 0.2);
+            transform: translateY(-2px);
+        }
+        
+        .mixdog-button:active {
+            transform: translateY(0);
+        }
+        
+        /* App Launcher */
+        #app-launcher {
+            position: absolute;
+            bottom: 80px;
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            gap: 20px;
+            padding: 12px 24px;
+            background: rgba(30, 30, 30, 0.7);
+            border-radius: 24px;
+            backdrop-filter: blur(10px);
+            z-index: 100;
+        }
+        
+        .app-icon {
+            width: 56px;
+            height: 56px;
+            border-radius: 12px;
+            background: rgba(255, 255, 255, 0.1);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 24px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        
+        .app-icon:hover {
+            background: rgba(255, 255, 255, 0.2);
+            transform: scale(1.1) translateZ(10px);
+        }
+        
+        /* Hand Cursor */
+        #hand-cursor {
+            position: absolute;
+            width: 40px;
+            height: 40px;
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 50%;
+            pointer-events: none;
+            z-index: 1000;
+            display: none;
+            justify-content: center;
+            align-items: center;
+            transform: translate(-50%, -50%);
+            transition: transform 0.1s;
+        }
+        
+        #hand-cursor::after {
+            content: '';
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, 0.5);
+        }
+        
+        /* Gesture Feedback */
+        #gesture-feedback {
+            position: absolute;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(0, 0, 0, 0.7);
+            padding: 12px 24px;
+            border-radius: 24px;
+            font-size: 14px;
+            display: none;
+            z-index: 100;
+        }
+        
+        /* VR Mode Specific */
+        .vr-mode {
+            overflow: hidden;
+        }
+        
+        .vr-mode #camera-feed {
+            transform: scaleX(-1) translateX(-25%);
+            width: 150%;
+        }
+        
+        /* Status Bar */
+        #status-bar {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            padding: 12px 24px;
+            display: flex;
+            justify-content: space-between;
+            z-index: 5;
+            background: linear-gradient(to bottom, rgba(0,0,0,0.5), transparent);
+        }
+        
+        #time {
+            font-weight: 500;
+            font-size: 14px;
+        }
+        
+        #battery {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 14px;
+        }
+        
+        #battery-level {
+            height: 12px;
+            width: 24px;
+            border: 1px solid #fff;
+            border-radius: 3px;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        #battery-fill {
+            position: absolute;
+            top: 0;
+            left: 0;
+            height: 100%;
+            width: 80%;
+            background: #fff;
+        }
+        
+        /* Debug Info */
+        #debug-info {
+            position: absolute;
+            top: 40px;
+            left: 10px;
+            background: rgba(0, 0, 0, 0.5);
+            padding: 8px;
+            font-size: 12px;
+            border-radius: 8px;
+            display: none;
+            z-index: 1000;
+        }
+        
+        /* App Windows */
+        #photos-app { width: 320px; height: 480px; top: 50%; left: 50%; transform: translate(-50%, -50%); }
+        #music-app { width: 300px; height: 400px; top: 100px; left: 100px; }
+        #browser-app { width: 350px; height: 450px; top: 150px; right: 100px; }
+        #settings-app { width: 300px; height: 380px; bottom: 100px; right: 100px; }
+    </style>
+</head>
+<body>
+    <div id="camera-container">
+        <video id="camera-feed" autoplay playsinline></video>
+    </div>
+    
+    <div id="ar-overlay">
+        <div id="status-bar">
+            <div id="time">12:34 PM</div>
+            <div id="battery">
+                <div id="battery-percent">80%</div>
+                <div id="battery-level">
+                    <div id="battery-fill"></div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Hand Cursor for Virtual Interactions -->
+        <div id="hand-cursor"></div>
+        
+        <!-- App Launcher -->
+        <div id="app-launcher">
+            <div class="app-icon" data-app="photos">📷</div>
+            <div class="app-icon" data-app="music">🎵</div>
+            <div class="app-icon" data-app="browser">🌐</div>
+            <div class="app-icon" data-app="settings">⚙️</div>
+        </div>
+        
+        <!-- App Windows with UI MixDog -->
+        <div class="mixdog-element" id="photos-app">
+            <div class="mixdog-header">
+                <div class="mixdog-title">Photos</div>
+                <div class="mixdog-close" data-app="photos">×</div>
+            </div>
+            <div class="mixdog-content">
+                <h3>Your Memories</h3>
+                <p>Capture and view your AR memories here.</p>
+                <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-top: 16px;">
+                    <div style="background: rgba(255,255,255,0.1); height: 80px; border-radius: 8px;"></div>
+                    <div style="background: rgba(255,255,255,0.1); height: 80px; border-radius: 8px;"></div>
+                    <div style="background: rgba(255,255,255,0.1); height: 80px; border-radius: 8px;"></div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="mixdog-element" id="music-app">
+            <div class="mixdog-header">
+                <div class="mixdog-title">Music</div>
+                <div class="mixdog-close" data-app="music">×</div>
+            </div>
+            <div class="mixdog-content">
+                <h3>Now Playing</h3>
+                <p style="margin: 8px 0 16px;">Dog AR Theme - Гуля ТВ</p>
+                <div style="display: flex; justify-content: center; gap: 16px;">
+                    <button class="mixdog-button" id="prev-btn">⏮</button>
+                    <button class="mixdog-button" id="play-btn">▶</button>
+                    <button class="mixdog-button" id="next-btn">⏭</button>
+                </div>
+                <div style="margin-top: 24px;">
+                    <h4>Playlist</h4>
+                    <div style="margin-top: 8px;">
+                        <div style="padding: 8px; background: rgba(255,255,255,0.05); border-radius: 8px; margin-bottom: 4px;">Track 1</div>
+                        <div style="padding: 8px; background: rgba(255,255,255,0.05); border-radius: 8px; margin-bottom: 4px;">Track 2</div>
+                        <div style="padding: 8px; background: rgba(255,255,255,0.05); border-radius: 8px;">Track 3</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="mixdog-element" id="browser-app">
+            <div class="mixdog-header">
+                <div class="mixdog-title">Browser</div>
+                <div class="mixdog-close" data-app="browser">×</div>
+            </div>
+            <div class="mixdog-content">
+                <input type="text" placeholder="Search or enter URL" style="width: 100%; padding: 8px 12px; border-radius: 8px; border: none; background: rgba(255,255,255,0.1); color: white; margin-bottom: 16px;">
+                <div style="background: rgba(255,255,255,0.05); height: 200px; border-radius: 8px; display: flex; justify-content: center; align-items: center;">
+                    <p>Welcome to Dog AR Browser</p>
+                </div>
+                <div style="display: flex; gap: 8px; margin-top: 16px;">
+                    <button class="mixdog-button">← Back</button>
+                    <button class="mixdog-button">Forward →</button>
+                    <button class="mixdog-button">Refresh</button>
+                </div>
+            </div>
+        </div>
+        
+        <div class="mixdog-element" id="settings-app">
+            <div class="mixdog-header">
+                <div class="mixdog-title">Settings</div>
+                <div class="mixdog-close" data-app="settings">×</div>
+            </div>
+            <div class="mixdog-content">
+                <h3>Dog AR Settings</h3>
+                <div style="margin-top: 16px;">
+                    <div style="margin-bottom: 12px;">
+                        <label style="display: flex; align-items: center; gap: 8px;">
+                            <input type="checkbox" id="gesture-toggle" checked>
+                            <span>Enable Gesture Control</span>
+                        </label>
+                    </div>
+                    <div style="margin-bottom: 12px;">
+                        <label style="display: flex; align-items: center; gap: 8px;">
+                            <input type="checkbox" id="hand-tracking-toggle">
+                            <span>Enable Hand Tracking</span>
+                        </label>
+                    </div>
+                    <div style="margin-bottom: 12px;">
+                        <label style="display: flex; align-items: center; gap: 8px;">
+                            <input type="checkbox" id="vr-mode-toggle">
+                            <span>VR Mode (for Cardboard)</span>
+                        </label>
+                    </div>
+                    <div style="margin-bottom: 12px;">
+                        <label style="display: flex; align-items: center; gap: 8px;">
+                            <input type="checkbox" id="debug-toggle">
+                            <span>Show Debug Info</span>
+                        </label>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div id="gesture-feedback">Gesture Detected: Pinch</div>
+        
+        <div id="debug-info"></div>
+    </div>
+    
+    <script>
+        // Initialize camera
+        const video = document.getElementById('camera-feed');
+        const cameraContainer = document.getElementById('camera-container');
+        
+        async function initCamera() {
+            try {
+                const stream = await navigator.mediaDevices.getUserMedia({ 
+                    video: { 
+                        facingMode: 'environment',
+                        width: { ideal: 1920 },
+                        height: { ideal: 1080 }
+                    } 
+                });
+                video.srcObject = stream;
+                
+                // For VR mode, we need to adjust the camera feed
+                document.getElementById('vr-mode-toggle').addEventListener('change', function(e) {
+                    if (e.target.checked) {
+                        document.body.classList.add('vr-mode');
+                    } else {
+                        document.body.classList.remove('vr-mode');
+                    }
+                });
+            } catch (err) {
+                console.error("Camera access denied:", err);
+                alert("Could not access camera. This app works best with camera access.");
+            }
+        }
+        
+        initCamera();
+        
+        // Update time
+        function updateTime() {
+            const now = new Date();
+            const timeStr = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+            document.getElementById('time').textContent = timeStr;
+        }
+        setInterval(updateTime, 1000);
+        updateTime();
+        
+        // Update battery (simulated)
+        function updateBattery() {
+            const percent = Math.floor(Math.random() * 20) + 70; // Random between 70-90%
+            document.getElementById('battery-percent').textContent = `${percent}%`;
+            document.getElementById('battery-fill').style.width = `${percent}%`;
+        }
+        setInterval(updateBattery, 10000);
+        updateBattery();
+        
+        // UI MixDog App Management
+        const appIcons = document.querySelectorAll('.app-icon');
+        const appWindows = document.querySelectorAll('.mixdog-element');
+        const closeButtons = document.querySelectorAll('.mixdog-close');
+        
+        appIcons.forEach(icon => {
+            icon.addEventListener('click', () => {
+                const appName = icon.getAttribute('data-app');
+                document.getElementById(`${appName}-app`).style.display = 'block';
+            });
+        });
+        
+        closeButtons.forEach(button => {
+            button.addEventListener('click', (e) => {
+                e.stopPropagation();
+                const appName = button.getAttribute('data-app');
+                document.getElementById(`${appName}-app`).style.display = 'none';
+            });
+        });
+        
+        // Make windows draggable
+        appWindows.forEach(window => {
+            const header = window.querySelector('.mixdog-header');
+            let isDragging = false;
+            let offsetX, offsetY;
+            
+            header.addEventListener('mousedown', (e) => {
+                isDragging = true;
+                offsetX = e.clientX - window.getBoundingClientRect().left;
+                offsetY = e.clientY - window.getBoundingClientRect().top;
+                window.style.cursor = 'grabbing';
+            });
+            
+            document.addEventListener('mousemove', (e) => {
+                if (!isDragging) return;
+                
+                const x = e.clientX - offsetX;
+                const y = e.clientY - offsetY;
+                
+                window.style.left = `${x}px`;
+                window.style.top = `${y}px`;
+            });
+            
+            document.addEventListener('mouseup', () => {
+                isDragging = false;
+                window.style.cursor = '';
+            });
+        });
+        
+        // Music App Functionality
+        const playBtn = document.getElementById('play-btn');
+        let isPlaying = false;
+        
+        playBtn.addEventListener('click', () => {
+            isPlaying = !isPlaying;
+            playBtn.textContent = isPlaying ? '❚❚' : '▶';
+        });
+        
+        // Hand Tracking and Virtual Touch
+        const handCursor = document.getElementById('hand-cursor');
+        let isHandTracking = false;
+        
+        document.getElementById('hand-tracking-toggle').addEventListener('change', function(e) {
+            isHandTracking = e.target.checked;
+            handCursor.style.display = e.target.checked ? 'flex' : 'none';
+            
+            if (isHandTracking) {
+                startHandTracking();
+            }
+        });
+        
+        // Simplified hand tracking (in a real app, you would use TensorFlow.js or similar)
+        function startHandTracking() {
+            // This is a simulation - in a real app you would process camera feed with ML
+            document.addEventListener('mousemove', (e) => {
+                if (!isHandTracking) return;
+                
+                handCursor.style.left = `${e.clientX}px`;
+                handCursor.style.top = `${e.clientY}px`;
+                
+                // Check if cursor is over clickable elements
+                const elements = document.querySelectorAll('.app-icon, .mixdog-button, .mixdog-close');
+                let isOverClickable = false;
+                
+                elements.forEach(el => {
+                    const rect = el.getBoundingClientRect();
+                    if (e.clientX >= rect.left && e.clientX <= rect.right &&
+                        e.clientY >= rect.top && e.clientY <= rect.bottom) {
+                        isOverClickable = true;
+                        el.style.transform = 'scale(1.05) translateZ(10px)';
+                    } else {
+                        el.style.transform = '';
+                    }
+                });
+                
+                handCursor.style.background = isOverClickable ? 
+                    'rgba(100, 255, 100, 0.3)' : 'rgba(255, 255, 255, 0.2)';
+            });
+            
+            document.addEventListener('click', (e) => {
+                if (!isHandTracking) return;
+                
+                // Simulate hand tap
+                handCursor.style.transform = 'translate(-50%, -50%) scale(0.8)';
+                setTimeout(() => {
+                    handCursor.style.transform = 'translate(-50%, -50%) scale(1)';
+                }, 100);
+            });
+        }
+        
+        // Advanced Gesture Detection
+        let initialDistance = null;
+        let initialScale = 1;
+        let currentApp = null;
+        
+        document.addEventListener('touchstart', (e) => {
+            if (!document.getElementById('gesture-toggle').checked) return;
+            
+            if (e.touches.length === 2) {
+                initialDistance = Math.hypot(
+                    e.touches[0].clientX - e.touches[1].clientX,
+                    e.touches[0].clientY - e.touches[1].clientY
+                );
+                
+                // Check if we're touching an app window
+                appWindows.forEach(window => {
+                    const rect = window.getBoundingClientRect();
+                    if ((e.touches[0].clientX >= rect.left && e.touches[0].clientX <= rect.right &&
+                         e.touches[0].clientY >= rect.top && e.touches[0].clientY <= rect.bottom) ||
+                        (e.touches[1].clientX >= rect.left && e.touches[1].clientX <= rect.right &&
+                         e.touches[1].clientY >= rect.top && e.touches[1].clientY <= rect.bottom)) {
+                        currentApp = window;
+                        initialScale = parseFloat(window.style.transform?.replace('scale(', '') || 1);
+                    }
+                });
+            }
+        });
+        
+        document.addEventListener('touchmove', (e) => {
+            if (!document.getElementById('gesture-toggle').checked) return;
+            
+            if (e.touches.length === 2 && initialDistance !== null) {
+                const currentDistance = Math.hypot(
+                    e.touches[0].clientX - e.touches[1].clientX,
+                    e.touches[0].clientY - e.touches[1].clientY
+                );
+                
+                const feedback = document.getElementById('gesture-feedback');
+                
+                if (currentApp) {
+                    // Scale the current app
+                    const scale = initialScale * (currentDistance / initialDistance);
+                    currentApp.style.transform = `scale(${Math.min(Math.max(scale, 0.5), 2)})`;
+                    
+                    feedback.textContent = `Resizing: ${scale.toFixed(1)}x`;
+                    feedback.style.display = 'block';
+                } else {
+                    // Global gestures
+                    if (currentDistance < initialDistance - 30) {
+                        feedback.textContent = "Gesture: Pinch In (Close All)";
+                        feedback.style.display = 'block';
+                    } else if (currentDistance > initialDistance + 30) {
+                        feedback.textContent = "Gesture: Pinch Out (Show All)";
+                        feedback.style.display = 'block';
+                    }
+                }
+            }
+        });
+        
+        document.addEventListener('touchend', (e) => {
+            if (!document.getElementById('gesture-toggle').checked) return;
+            
+            const feedback = document.getElementById('gesture-feedback');
+            
+            if (initialDistance !== null && !currentApp) {
+                const touches = e.changedTouches;
+                let isPinch = false;
+                
+                if (touches.length === 2) {
+                    const endDistance = Math.hypot(
+                        touches[0].clientX - touches[1].clientX,
+                        touches[0].clientY - touches[1].clientY
+                    );
+                    
+                    if (endDistance < initialDistance - 30) {
+                        // Pinch in - close all apps
+                        appWindows.forEach(window => {
+                            window.style.display = 'none';
+                        });
+                        isPinch = true;
+                    } else if (endDistance > initialDistance + 30) {
+                        // Pinch out - show all apps
+                        appWindows.forEach(window => {
+                            window.style.display = 'block';
+                        });
+                        isPinch = true;
+                    }
+                }
+                
+                setTimeout(() => {
+                    if (!isPinch && feedback.textContent.includes("Resizing")) {
+                        feedback.textContent = "Release to confirm size";
+                    } else {
+                        feedback.style.display = 'none';
+                    }
+                }, 1000);
+            }
+            
+            initialDistance = null;
+            currentApp = null;
+        });
+        
+        // Debug Info
+        document.getElementById('debug-toggle').addEventListener('change', (e) => {
+            document.getElementById('debug-info').style.display = e.target.checked ? 'block' : 'none';
+        });
+        
+        function updateDebugInfo() {
+            const debugInfo = document.getElementById('debug-info');
+            debugInfo.innerHTML = `
+                <strong>Dog AR 2.0 with UI MixDog</strong><br>
+                Screen: ${window.innerWidth}x${window.innerHeight}<br>
+                Touch support: ${'ontouchstart' in window}<br>
+                Camera: ${video.srcObject ? 'active' : 'inactive'}<br>
+                Hand tracking: ${isHandTracking ? 'enabled' : 'disabled'}<br>
+                VR mode: ${document.getElementById('vr-mode-toggle').checked ? 'on' : 'off'}
+            `;
+        }
+        setInterval(updateDebugInfo, 1000);
+        
+        // VR Mode Sensor Integration (simulated)
+        if (window.DeviceOrientationEvent) {
+            window.addEventListener('deviceorientation', (e) => {
+                if (document.getElementById('vr-mode-toggle').checked) {
+                    // In a real VR app, you would use these values to adjust the view
+                    const beta = e.beta;  // -180 to 180 (front/back tilt)
+                    const gamma = e.gamma; // -90 to 90 (left/right tilt)
+                    const alpha = e.alpha; // 0 to 360 (compass direction)
+                    
+                    // Simple response to orientation
+                    cameraContainer.style.transform = `
+                        rotateX(${beta ? beta * 0.2 : 0}deg) 
+                        rotateY(${gamma ? gamma * 0.2 : 0}deg)
+                    `;
+                }
+            });
+        }
+    </script>
+</body>
+</html>
