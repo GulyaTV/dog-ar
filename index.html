@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1.0">
-  <title>Dog MR 1.0</title>
+  <title>Dog MR 1.0</title>
   <link rel="stylesheet" href="styles.css">
 </head>
 <body>
@@ -11,6 +11,9 @@
   <canvas id="three-canvas"></canvas>
   <div id="hud"></div>
 
-  <script type="module" src="./scripts/main.js"></script>
+  <!-- Ammo.js для физики -->
+  <script src="https://cdn.jsdelivr.net/npm/ammo.js@0.0.10/builds/ammo.wasm.js"></script>
+  <!-- Основная логика как ES‑модуль -->
+  <script type="module" src="scripts/main.js"></script>
 </body>
 </html>
