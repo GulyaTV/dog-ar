@@ -1,40 +1,23 @@
 /* styles.css */
 * { margin: 0; padding: 0; box-sizing: border-box; }
-
-html, body {
-  width: 100%; height: 100%;
-  overflow: hidden;
-  font-family: sans-serif;
-}
-
-/* Камера и канвас накладываются друг на друга */
+html, body { width:100%; height:100%; overflow:hidden; font-family:sans-serif; }
 #camera, #three-canvas {
-  position: absolute;
-  top: 0; left: 0;
-  width: 100%; height: 100%;
-  object-fit: cover;
+  position:absolute; top:0; left:0;
+  width:100%; height:100%;
+  object-fit:cover;
 }
-
-/* UI MixDog: плавающие кнопки */
-#ui {
-  position: absolute;
-  bottom: 10%; left: 50%;
-  transform: translateX(-50%);
-  display: flex;
-  gap: 1rem;
+#hud {
+  position:absolute; top:0; left:0;
+  width:100%; height:100%;
+  pointer-events:none; /* Управление только жестами */
 }
-
-.mixdog-btn {
-  padding: 1rem 2rem;
-  background: rgba(0,0,0,0.6);
-  color: #fff;
-  font-size: 1rem;
-  border: none;
-  border-radius: 0.5rem;
-  pointer-events: none; /* запретим клики мышью — только жестами */
-  transition: background 0.2s;
+/* Пример кнопок CSS‑HUD: */
+.hud-btn {
+  position:absolute;
+  padding:0.8rem 1.5rem;
+  background:rgba(0,0,0,0.5);
+  color:#fff; border-radius:0.5rem;
+  font-size:1rem;
+  transition:transform .1s;
 }
-
-.mixdog-btn.active {
-  background: rgba(50,200,50,0.8);
-}
+.hud-btn.active { transform:scale(1.1); background:rgba(0,150,0,0.7); }
