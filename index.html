@@ -8,20 +8,17 @@
   <link rel="stylesheet" href="styles.css">
 </head>
 <body>
-  <!-- фон — видео с камеры -->
   <video id="camera" autoplay playsinline muted></video>
-  
-  <!-- Three.js‑канвас -->
   <canvas id="three-canvas"></canvas>
-
-  <!-- Зона для «плоского» HUD (CSS‑3D через Three.js CSS3DRenderer можно добавить позже) -->
   <div id="hud"></div>
 
-  <!-- скрипты: Three.js, VRButton, ваши модули -->
+  <!-- три модуля Three.js/WebXR -->
   <script src="https://cdn.jsdelivr.net/npm/three@0.142.0/build/three.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/three@0.142.0/examples/jsm/webxr/VRButton.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/@mediapipe/hands/hands.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js"></script>
   <script type="module" src="scripts/main.js"></script>
+  <!-- physics -->
+  <script src="https://cdn.jsdelivr.net/npm/ammo.js@0.0.10/builds/ammo.wasm.js"></script>
 </body>
 </html>
